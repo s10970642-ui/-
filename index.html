@@ -21,7 +21,7 @@
     --star: #f59e0b;
   }
   @media (prefers-color-scheme: dark) {
-    :root {
+    :root:not([data-theme="light"]) {
       --bg: #111114;
       --card: #1c1c21;
       --text: #f2f2f5;
@@ -33,7 +33,22 @@
       --good-soft: #15291c;
       --bad: #f87171;
       --bad-soft: #2f1717;
+      color-scheme: dark;
     }
+  }
+  :root[data-theme="dark"] {
+    --bg: #111114;
+    --card: #1c1c21;
+    --text: #f2f2f5;
+    --muted: #9a9aa3;
+    --line: #2e2e36;
+    --accent: #818cf8;
+    --accent-soft: #23243a;
+    --good: #4ade80;
+    --good-soft: #15291c;
+    --bad: #f87171;
+    --bad-soft: #2f1717;
+    color-scheme: dark;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; }
@@ -43,7 +58,7 @@
     font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
     -webkit-tap-highlight-color: transparent;
   }
-  .wrap { max-width: 640px; margin: 0 auto; padding: 16px 16px 48px; }
+  .wrap { max-width: 640px; margin: 0 auto; padding-block: 16px 48px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
   header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
   h1 { font-size: 22px; margin: 4px 0 8px; }
   #stats { color: var(--muted); font-size: 14px; }
@@ -156,6 +171,7 @@
           <input type="text" id="add-pos" placeholder="詞性">
           <input type="text" id="add-zh" class="full" placeholder="中文意思，例如 開胃菜" required>
           <button class="btn primary full" type="submit">加入</button>
+          <div class="full muted" id="add-msg" style="font-size:14px"></div>
         </form>
       </details>
       <details>
@@ -395,7 +411,14 @@ $('word-list').addEventListener('click', (e) => {
   if (!w) return;
   if (b.dataset.act === 'star') { prog(w).star = !prog(w).star; saveProgress(); renderList(); }
   if (b.dataset.act === 'speak') speak(w.en);
-  if (b.dataset.act === 'del' && confirm(`刪除「${w.en}」？`)) {
+  if (b.dataset.act === 'del' && !b.dataset.armed) {
+    b.dataset.armed = '1';
+    b.textContent = '確定刪除？';
+    b.style.fontSize = '13px';
+    b.style.color = 'var(--bad)';
+    return;
+  }
+  if (b.dataset.act === 'del') {
     custom = custom.filter((x) => x.en !== en);
     delete progress[en];
     store.set('vocab.custom', custom);
@@ -408,7 +431,8 @@ $('add-form').addEventListener('submit', (e) => {
   const en = $('add-en').value.trim();
   const zh = $('add-zh').value.trim();
   if (!en || !zh) return;
-  if (allWords().some((w) => w.en.toLowerCase() === en.toLowerCase())) { alert('這個單字已經在清單裡了'); return; }
+  if (allWords().some((w) => w.en.toLowerCase() === en.toLowerCase())) { $('add-msg').textContent = `「${en}」已經在清單裡了`; return; }
+  $('add-msg').textContent = `已加入「${en}」`;
   custom.push({ en, zh, pos: $('add-pos').value.trim() });
   store.set('vocab.custom', custom);
   e.target.reset();
@@ -416,7 +440,6 @@ $('add-form').addEventListener('submit', (e) => {
   renderList();
 });
 $('reset-btn').addEventListener('click', () => {
-  if (!confirm('確定要清除所有學習紀錄嗎？')) return;
   progress = {};
   saveProgress();
   renderList();
