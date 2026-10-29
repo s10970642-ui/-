@@ -1,0 +1,688 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#4f46e5">
+<title>單字背背</title>
+<style>
+  :root {
+    --bg: #f5f5f7;
+    --card: #ffffff;
+    --text: #1d1d1f;
+    --muted: #6e6e73;
+    --line: #e2e2e7;
+    --accent: #4f46e5;
+    --accent-soft: #eef0ff;
+    --good: #16a34a;
+    --good-soft: #e7f7ec;
+    --bad: #dc2626;
+    --bad-soft: #fdecec;
+    --star: #f59e0b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111114;
+      --card: #1c1c21;
+      --text: #f2f2f5;
+      --muted: #9a9aa3;
+      --line: #2e2e36;
+      --accent: #818cf8;
+      --accent-soft: #23243a;
+      --good: #4ade80;
+      --good-soft: #15291c;
+      --bad: #f87171;
+      --bad-soft: #2f1717;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 16px 16px 48px; }
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  h1 { font-size: 22px; margin: 4px 0 8px; }
+  #stats { color: var(--muted); font-size: 14px; }
+  nav { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 4px; margin-bottom: 12px; }
+  nav button { border: 0; background: none; color: var(--muted); padding: 10px 4px; border-radius: 9px; font-size: 15px; cursor: pointer; }
+  nav button.active { background: var(--accent); color: #fff; font-weight: 600; }
+  .scope { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 14px; color: var(--muted); flex-wrap: wrap; }
+  select, input[type=text] {
+    font: inherit; color: var(--text); background: var(--card);
+    border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px;
+  }
+  input[type=text] { width: 100%; }
+  .btn { font: inherit; border: 1px solid var(--line); background: var(--card); color: var(--text); padding: 10px 16px; border-radius: 10px; cursor: pointer; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .btn.good { background: var(--good); border-color: var(--good); color: #fff; font-weight: 600; }
+  .btn.bad { background: var(--bad); border-color: var(--bad); color: #fff; font-weight: 600; }
+  .btn.small { padding: 6px 10px; font-size: 14px; }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .row > .grow { flex: 1; }
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+  .hidden { display: none !important; }
+  .muted { color: var(--muted); }
+  .center { text-align: center; }
+  .progress-bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; margin: 4px 0 12px; }
+  .progress-bar > div { height: 100%; background: var(--accent); width: 0; transition: width .2s; }
+
+  /* list */
+  .list { list-style: none; margin: 12px 0 0; padding: 0; }
+  .list li { display: grid; grid-template-columns: 28px 1fr auto; gap: 8px; align-items: center; padding: 10px 4px; border-bottom: 1px solid var(--line); }
+  .list li:last-child { border-bottom: 0; }
+  .en { font-weight: 600; }
+  .pos { color: var(--muted); font-size: 13px; margin-left: 4px; font-style: italic; }
+  .zh { color: var(--text); font-size: 15px; }
+  .note { color: var(--muted); font-size: 13px; }
+  .icon-btn { border: 0; background: none; font-size: 18px; cursor: pointer; padding: 4px; line-height: 1; color: var(--muted); }
+  .icon-btn.on { color: var(--star); }
+  .dots { display: inline-flex; gap: 3px; }
+  .dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line); display: inline-block; }
+  .dots i.f { background: var(--good); }
+  .actions { display: flex; align-items: center; gap: 2px; }
+  details summary { cursor: pointer; color: var(--accent); margin-top: 12px; }
+  .add-form { display: grid; grid-template-columns: 1fr 80px; gap: 8px; margin-top: 10px; }
+  .add-form .full { grid-column: 1 / -1; }
+
+  /* flashcard */
+  .card {
+    min-height: 240px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 24px 16px;
+    cursor: pointer; user-select: none; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,.04);
+  }
+  .card .big { font-size: 32px; font-weight: 700; word-break: break-word; }
+  .card .mid { font-size: 22px; margin-top: 8px; }
+  .card .hint { color: var(--muted); font-size: 13px; margin-top: 16px; }
+  .answer-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+  .answer-btns .btn { padding: 14px; font-size: 17px; }
+
+  /* quiz */
+  .q-prompt { font-size: 26px; font-weight: 700; text-align: center; margin: 8px 0 4px; word-break: break-word; }
+  .options { display: grid; gap: 10px; margin-top: 16px; }
+  .options button { text-align: left; font: inherit; font-size: 17px; padding: 14px 16px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); color: var(--text); cursor: pointer; }
+  .options button.correct { background: var(--good-soft); border-color: var(--good); }
+  .options button.wrong { background: var(--bad-soft); border-color: var(--bad); }
+  .feedback { min-height: 24px; text-align: center; margin-top: 12px; font-weight: 600; }
+  .feedback.ok { color: var(--good); }
+  .feedback.no { color: var(--bad); }
+  .summary-list { text-align: left; margin: 12px 0; padding-left: 20px; }
+  .score { font-size: 40px; font-weight: 800; color: var(--accent); }
+  .spell-input { font-size: 20px; text-align: center; margin-top: 16px; }
+  .spell-input.ok { border-color: var(--good); background: var(--good-soft); }
+  .spell-input.no { border-color: var(--bad); background: var(--bad-soft); }
+  .kbd-tip { color: var(--muted); font-size: 12px; text-align: center; margin-top: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>📒 單字背背</h1>
+    <div id="stats"></div>
+  </header>
+
+  <nav id="tabs">
+    <button data-view="list" class="active">單字表</button>
+    <button data-view="cards">字卡</button>
+    <button data-view="quiz">選擇題</button>
+    <button data-view="spell">拼字</button>
+  </nav>
+
+  <div class="scope" id="scope-bar">
+    <span>練習範圍</span>
+    <select id="scope">
+      <option value="all">全部單字</option>
+      <option value="weak">還不熟的（熟練度 &lt; 3）</option>
+      <option value="star">⭐ 加星號的</option>
+    </select>
+    <span id="scope-count"></span>
+  </div>
+
+  <!-- 單字表 -->
+  <section id="view-list">
+    <div class="panel">
+      <div class="row">
+        <input type="text" id="search" class="grow" placeholder="搜尋英文或中文…" autocomplete="off">
+      </div>
+      <ul class="list" id="word-list"></ul>
+      <details>
+        <summary>＋ 新增單字</summary>
+        <form class="add-form" id="add-form">
+          <input type="text" id="add-en" placeholder="英文，例如 appetizer" required>
+          <input type="text" id="add-pos" placeholder="詞性">
+          <input type="text" id="add-zh" class="full" placeholder="中文意思，例如 開胃菜" required>
+          <button class="btn primary full" type="submit">加入</button>
+        </form>
+      </details>
+      <details>
+        <summary>重設學習紀錄</summary>
+        <p class="muted">會清除熟練度與星號（自己新增的單字會保留）。</p>
+        <button class="btn bad small" id="reset-btn" type="button">確定重設</button>
+      </details>
+    </div>
+  </section>
+
+  <!-- 字卡 -->
+  <section id="view-cards" class="hidden">
+    <div class="row" style="margin-bottom:8px">
+      <label class="grow muted" style="font-size:14px">
+        <input type="checkbox" id="card-reverse"> 先看中文
+      </label>
+      <button class="btn small" id="card-restart">重新開始</button>
+    </div>
+    <div class="progress-bar"><div id="card-bar"></div></div>
+    <div id="card-area"></div>
+    <div class="kbd-tip">鍵盤：空白鍵翻面 · 1 不熟 · 2 記得</div>
+  </section>
+
+  <!-- 選擇題 -->
+  <section id="view-quiz" class="hidden">
+    <div class="row" style="margin-bottom:8px">
+      <select id="quiz-mode" class="grow">
+        <option value="mix">混合題型</option>
+        <option value="en2zh">看英文選中文</option>
+        <option value="zh2en">看中文選英文</option>
+      </select>
+      <button class="btn small" id="quiz-restart">重新開始</button>
+    </div>
+    <div class="progress-bar"><div id="quiz-bar"></div></div>
+    <div class="panel" id="quiz-area"></div>
+    <div class="kbd-tip">鍵盤：1–4 作答 · Enter 下一題</div>
+  </section>
+
+  <!-- 拼字 -->
+  <section id="view-spell" class="hidden">
+    <div class="row" style="margin-bottom:8px">
+      <span class="grow muted" style="font-size:14px">看中文，拼出英文</span>
+      <button class="btn small" id="spell-restart">重新開始</button>
+    </div>
+    <div class="progress-bar"><div id="spell-bar"></div></div>
+    <div class="panel" id="spell-area"></div>
+  </section>
+</div>
+
+<script>
+// 筆記本裡的單字。star: true 表示筆記上有打勾的字
+const BASE_WORDS = [
+  // 第一頁
+  { en: 'topping', pos: 'n.', zh: '調味料' },
+  { en: 'alternative', pos: 'n. / adj.', zh: '(n.) 選擇；(adj.) 替代的' },
+  { en: 'come with', pos: 'phr.', zh: '附帶、具有' },
+  { en: 'remaining', pos: 'adj.', zh: '剩下的' },
+  { en: 'dressing', pos: 'n.', zh: '沙拉醬', star: true },
+  { en: 'takeout', pos: 'n.', zh: '外帶' },
+  { en: 'dine', pos: 'v.', zh: '用餐', note: 'dine in 內用；diner 用餐者', star: true },
+  { en: 'voucher', pos: 'n.', zh: '代金券', note: '= coupon' },
+  { en: 'preferably', pos: 'adv.', zh: '最好是、可能的話', note: '= if possible', star: true },
+  { en: 'drop off', pos: 'v.', zh: '下落、放下' },
+  { en: 'bring about', pos: 'phr.', zh: '帶來、引起' },
+  { en: 'portion', pos: 'n.', zh: '部分；一份', note: 'portion = serving 一份' },
+  { en: 'exclusively', pos: 'adv.', zh: '僅僅、專門地', star: true },
+  { en: 'leftovers', pos: 'n.', zh: '剩菜', star: true },
+  { en: 'cuisine', pos: 'n.', zh: '菜餚' },
+  { en: 'catch on', pos: 'phr.', zh: '流行起來、理解' },
+  { en: 'spring up', pos: 'phr.', zh: '湧現' },
+  { en: 'economic', pos: 'adj.', zh: '經濟上的' },
+  { en: 'ease', pos: 'n.', zh: '輕鬆' },
+  { en: 'payment', pos: 'n.', zh: '付款' },
+  { en: 'royalty', pos: 'n.', zh: '皇室' },
+  // 第二頁
+  { en: 'palace', pos: 'n.', zh: '宮殿' },
+  { en: 'revolution', pos: 'n.', zh: '革命' },
+  { en: 'potential', pos: 'adj.', zh: '潛在的' },
+  { en: 'groceries', pos: 'n.', zh: '雜貨' },
+  { en: 'vegetarian', pos: 'n.', zh: '素食者' },
+  { en: 'commission', pos: 'n.', zh: '佣金' },
+  { en: 'take advantage of', pos: 'phr.', zh: '利用' },
+  { en: 'on a regular basis', pos: 'phr.', zh: '經常、定期' },
+  { en: 'unheard of', pos: 'phr.', zh: '前所未聞' },
+  { en: 'make sense', pos: 'phr.', zh: '合理' },
+  { en: 'be made up of', pos: 'phr.', zh: '組成' },
+  { en: 'come about', pos: 'phr.', zh: '發生、產生' },
+  { en: 'in no time', pos: 'phr.', zh: '馬上、立刻' },
+  { en: 'take a percentage of', pos: 'phr.', zh: '抽成' },
+  { en: 'place an order', pos: 'phr.', zh: '下訂單' },
+  { en: 'on the side', pos: 'phr.', zh: '另外放' },
+  { en: "can't be beat", pos: 'phr.', zh: '無可匹敵、最好的', note: '= be unbeatable = be second to none', alt: ['be unbeatable', 'be second to none', 'cannot be beat'] },
+  { en: 'patron', pos: 'n.', zh: '常客' },
+  // 第三頁
+  { en: 'celebrity chef', pos: 'n.', zh: '名廚' },
+  { en: 'gourmet', pos: 'n.', zh: '美食家', note: '= foodie', alt: ['foodie'] },
+  { en: 'proactive', pos: 'adj.', zh: '積極的' },
+  { en: 'procrastinator', pos: 'n.', zh: '有拖延症的人' },
+  { en: 'assorted', pos: 'adj.', zh: '各式各樣、綜合的' },
+  { en: 'signature dish', pos: 'n.', zh: '招牌菜' },
+];
+
+// ---------- 儲存 ----------
+const store = {
+  get(key, fallback) {
+    try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
+    catch { return fallback; }
+  },
+  set(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+  },
+};
+let progress = store.get('vocab.progress', {});
+let custom = store.get('vocab.custom', []);
+const MAX_BOX = 5;
+
+function allWords() { return [...BASE_WORDS, ...custom]; }
+function prog(w) {
+  if (!progress[w.en]) progress[w.en] = { box: 0, right: 0, wrong: 0, star: !!w.star };
+  return progress[w.en];
+}
+function saveProgress() { store.set('vocab.progress', progress); renderStats(); }
+function mark(w, ok) {
+  const p = prog(w);
+  if (ok) { p.box = Math.min(MAX_BOX, p.box + 1); p.right++; }
+  else { p.box = 0; p.wrong++; }
+  saveProgress();
+}
+
+// ---------- 工具 ----------
+const $ = (id) => document.getElementById(id);
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function shuffle(a) {
+  a = [...a];
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+// 熟練度低的字優先，但保留隨機性
+function pickWeighted(words, n) {
+  return words
+    .map((w) => ({ w, k: prog(w).box + Math.random() * 2.5 }))
+    .sort((a, b) => a.k - b.k)
+    .slice(0, n)
+    .map((x) => x.w);
+}
+function normalize(s) {
+  return s.toLowerCase().replace(/[’‘`]/g, "'").replace(/[.!?,]/g, '').replace(/\s+/g, ' ').trim();
+}
+function speak(text) {
+  if (!('speechSynthesis' in window)) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'en-US';
+  u.rate = 0.9;
+  speechSynthesis.speak(u);
+}
+function dots(box) {
+  let h = '<span class="dots" title="熟練度 ' + box + '/' + MAX_BOX + '">';
+  for (let i = 0; i < MAX_BOX; i++) h += '<i class="' + (i < box ? 'f' : '') + '"></i>';
+  return h + '</span>';
+}
+function setBar(id, done, total) {
+  $(id).style.width = (total ? Math.round((done / total) * 100) : 0) + '%';
+}
+
+// ---------- 範圍 ----------
+function pool() {
+  const scope = $('scope').value;
+  const words = allWords();
+  if (scope === 'star') return words.filter((w) => prog(w).star);
+  if (scope === 'weak') return words.filter((w) => prog(w).box < 3);
+  return words;
+}
+function emptyPoolHtml() {
+  return '<div class="panel center"><p>這個範圍目前沒有單字 🎉</p><p class="muted">把上方「練習範圍」改成「全部單字」試試看。</p></div>';
+}
+function renderStats() {
+  const words = allWords();
+  const mastered = words.filter((w) => prog(w).box >= 4).length;
+  const starred = words.filter((w) => prog(w).star).length;
+  $('stats').textContent = `共 ${words.length} 字 · 已熟 ${mastered} · ⭐ ${starred}`;
+  $('scope-count').textContent = `（${pool().length} 字）`;
+}
+
+// ---------- 分頁 ----------
+let currentView = 'list';
+function showView(view) {
+  currentView = view;
+  document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('active', b.dataset.view === view));
+  ['list', 'cards', 'quiz', 'spell'].forEach((v) => $('view-' + v).classList.toggle('hidden', v !== view));
+  $('scope-bar').classList.toggle('hidden', view === 'list');
+  if (view === 'list') renderList();
+  if (view === 'cards') startCards();
+  if (view === 'quiz') startQuiz();
+  if (view === 'spell') startSpell();
+}
+$('tabs').addEventListener('click', (e) => {
+  const b = e.target.closest('button');
+  if (b) showView(b.dataset.view);
+});
+$('scope').addEventListener('change', () => {
+  renderStats();
+  showView(currentView);
+});
+
+// ---------- 單字表 ----------
+function renderList() {
+  const q = $('search').value.trim().toLowerCase();
+  const customSet = new Set(custom.map((w) => w.en));
+  const words = allWords().filter((w) =>
+    !q || w.en.toLowerCase().includes(q) || w.zh.includes(q) || (w.note || '').toLowerCase().includes(q));
+  $('word-list').innerHTML = words.map((w) => {
+    const p = prog(w);
+    return `<li data-en="${esc(w.en)}">
+      <button class="icon-btn ${p.star ? 'on' : ''}" data-act="star" aria-label="加星號">${p.star ? '★' : '☆'}</button>
+      <div>
+        <div><span class="en">${esc(w.en)}</span><span class="pos">${esc(w.pos || '')}</span></div>
+        <div class="zh">${esc(w.zh)}</div>
+        ${w.note ? `<div class="note">${esc(w.note)}</div>` : ''}
+      </div>
+      <div class="actions">
+        ${dots(p.box)}
+        <button class="icon-btn" data-act="speak" aria-label="發音">🔊</button>
+        ${customSet.has(w.en) ? '<button class="icon-btn" data-act="del" aria-label="刪除">✕</button>' : ''}
+      </div>
+    </li>`;
+  }).join('') || '<li class="muted">找不到符合的單字</li>';
+}
+$('search').addEventListener('input', renderList);
+$('word-list').addEventListener('click', (e) => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  const en = b.closest('li').dataset.en;
+  const w = allWords().find((x) => x.en === en);
+  if (!w) return;
+  if (b.dataset.act === 'star') { prog(w).star = !prog(w).star; saveProgress(); renderList(); }
+  if (b.dataset.act === 'speak') speak(w.en);
+  if (b.dataset.act === 'del' && confirm(`刪除「${w.en}」？`)) {
+    custom = custom.filter((x) => x.en !== en);
+    delete progress[en];
+    store.set('vocab.custom', custom);
+    saveProgress();
+    renderList();
+  }
+});
+$('add-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const en = $('add-en').value.trim();
+  const zh = $('add-zh').value.trim();
+  if (!en || !zh) return;
+  if (allWords().some((w) => w.en.toLowerCase() === en.toLowerCase())) { alert('這個單字已經在清單裡了'); return; }
+  custom.push({ en, zh, pos: $('add-pos').value.trim() });
+  store.set('vocab.custom', custom);
+  e.target.reset();
+  renderStats();
+  renderList();
+});
+$('reset-btn').addEventListener('click', () => {
+  if (!confirm('確定要清除所有學習紀錄嗎？')) return;
+  progress = {};
+  saveProgress();
+  renderList();
+});
+
+// ---------- 字卡 ----------
+const cards = { queue: [], total: 0, done: 0, flipped: false, known: 0, missed: new Set() };
+function startCards() {
+  const words = pool();
+  cards.queue = pickWeighted(words, words.length);
+  cards.total = words.length;
+  cards.done = 0;
+  cards.known = 0;
+  cards.missed = new Set();
+  cards.flipped = false;
+  renderCard();
+}
+function renderCard() {
+  setBar('card-bar', cards.done, cards.total);
+  const area = $('card-area');
+  if (!cards.total) { area.innerHTML = emptyPoolHtml(); return; }
+  if (!cards.queue.length) {
+    area.innerHTML = `<div class="panel center">
+      <div class="score">${cards.total - cards.missed.size} / ${cards.total}</div>
+      <p>一次就記得的單字</p>
+      ${cards.missed.size ? `<p class="muted">需要多看幾次：${[...cards.missed].map(esc).join('、')}</p>` : '<p>全部都記得，太強了！🎉</p>'}
+      <button class="btn primary" onclick="startCards()">再來一輪</button>
+    </div>`;
+    return;
+  }
+  const w = cards.queue[0];
+  const reverse = $('card-reverse').checked;
+  const front = reverse
+    ? `<div class="mid">${esc(w.zh)}</div><div class="pos">${esc(w.pos || '')}</div>`
+    : `<div class="big">${esc(w.en)}</div><div class="pos">${esc(w.pos || '')}</div>`;
+  const back = reverse
+    ? `<div class="big">${esc(w.en)}</div>${w.note ? `<div class="note">${esc(w.note)}</div>` : ''}`
+    : `<div class="mid">${esc(w.zh)}</div>${w.note ? `<div class="note">${esc(w.note)}</div>` : ''}`;
+  area.innerHTML = `
+    <div class="card" id="the-card">
+      ${front}
+      ${cards.flipped ? '<hr style="width:60%;border:0;border-top:1px solid var(--line);margin:16px 0">' + back : '<div class="hint">點一下翻面</div>'}
+    </div>
+    <div class="row" style="justify-content:center;margin-top:8px">
+      <button class="btn small" id="card-speak">🔊 發音</button>
+      <span class="muted" style="font-size:13px">剩 ${cards.queue.length} 張 · ${dots(prog(w).box)}</span>
+    </div>
+    <div class="answer-btns ${cards.flipped ? '' : 'hidden'}">
+      <button class="btn bad" id="card-no">😵 不熟</button>
+      <button class="btn good" id="card-yes">😎 記得</button>
+    </div>`;
+  $('the-card').onclick = flipCard;
+  $('card-speak').onclick = () => speak(w.en);
+  if (cards.flipped) {
+    $('card-no').onclick = () => answerCard(false);
+    $('card-yes').onclick = () => answerCard(true);
+  }
+}
+function flipCard() {
+  if (!cards.queue.length) return;
+  cards.flipped = !cards.flipped;
+  if (cards.flipped) speak(cards.queue[0].en);
+  renderCard();
+}
+function answerCard(ok) {
+  const w = cards.queue.shift();
+  const firstTime = !cards.missed.has(w.en);
+  if (ok) {
+    // 之前答錯過的字，這輪只是確認記住，不再加熟練度
+    if (firstTime) mark(w, true);
+    cards.done++;
+  } else {
+    mark(w, false);
+    cards.missed.add(w.en);
+    // 不熟的字過幾張後再出現
+    cards.queue.splice(Math.min(3, cards.queue.length), 0, w);
+  }
+  cards.flipped = false;
+  renderCard();
+}
+$('card-reverse').addEventListener('change', () => { cards.flipped = false; renderCard(); });
+$('card-restart').addEventListener('click', startCards);
+
+// ---------- 選擇題 ----------
+const QUIZ_LEN = 10;
+const quiz = { qs: [], i: 0, score: 0, answered: false, wrong: [] };
+function startQuiz() {
+  const words = pool();
+  const mode = $('quiz-mode').value;
+  const all = allWords();
+  quiz.qs = pickWeighted(words, Math.min(QUIZ_LEN, words.length)).map((w) => {
+    const dir = mode === 'mix' ? (Math.random() < 0.5 ? 'en2zh' : 'zh2en') : mode;
+    const key = dir === 'en2zh' ? 'zh' : 'en';
+    const seen = new Set([w[key]]);
+    const distractors = [];
+    for (const d of shuffle(all)) {
+      if (distractors.length === 3) break;
+      if (d.en === w.en || seen.has(d[key])) continue;
+      seen.add(d[key]);
+      distractors.push(d);
+    }
+    return { w, dir, options: shuffle([w, ...distractors]) };
+  });
+  quiz.i = 0;
+  quiz.score = 0;
+  quiz.wrong = [];
+  quiz.answered = false;
+  renderQuiz();
+}
+function renderQuiz() {
+  setBar('quiz-bar', quiz.i, quiz.qs.length);
+  const area = $('quiz-area');
+  if (!quiz.qs.length) { area.innerHTML = emptyPoolHtml(); return; }
+  if (quiz.i >= quiz.qs.length) {
+    area.innerHTML = `<div class="center">
+      <div class="score">${quiz.score} / ${quiz.qs.length}</div>
+      <p>${quiz.score === quiz.qs.length ? '全對！🎉' : quiz.score >= quiz.qs.length * 0.7 ? '很不錯，繼續加油 💪' : '多練幾次就會記住了 📚'}</p>
+      ${quiz.wrong.length ? `<p class="muted">答錯的單字：</p><ul class="summary-list">${quiz.wrong.map((w) => `<li><b>${esc(w.en)}</b> ${esc(w.zh)}</li>`).join('')}</ul>` : ''}
+      <button class="btn primary" onclick="startQuiz()">再測一次</button>
+    </div>`;
+    return;
+  }
+  const q = quiz.qs[quiz.i];
+  const prompt = q.dir === 'en2zh' ? q.w.en : q.w.zh;
+  const label = q.dir === 'en2zh' ? '選出正確的中文意思' : '選出正確的英文';
+  area.innerHTML = `
+    <div class="muted center" style="font-size:14px">第 ${quiz.i + 1} 題 · ${label}</div>
+    <div class="q-prompt">${esc(prompt)}</div>
+    <div class="center"><span class="pos">${esc(q.w.pos || '')}</span>
+      ${q.dir === 'en2zh' ? '<button class="icon-btn" id="quiz-speak">🔊</button>' : ''}</div>
+    <div class="options">
+      ${q.options.map((o, idx) => `<button data-idx="${idx}">${idx + 1}. ${esc(q.dir === 'en2zh' ? o.zh : o.en)}</button>`).join('')}
+    </div>
+    <div class="feedback" id="quiz-fb"></div>
+    <div class="center"><button class="btn primary hidden" id="quiz-next">下一題 →</button></div>`;
+  if ($('quiz-speak')) $('quiz-speak').onclick = () => speak(q.w.en);
+  area.querySelectorAll('.options button').forEach((b) => (b.onclick = () => answerQuiz(+b.dataset.idx)));
+  $('quiz-next').onclick = nextQuiz;
+}
+function answerQuiz(idx) {
+  if (quiz.answered) return;
+  const q = quiz.qs[quiz.i];
+  const ok = q.options[idx] === q.w;
+  quiz.answered = true;
+  mark(q.w, ok);
+  if (ok) quiz.score++; else quiz.wrong.push(q.w);
+  const buttons = $('quiz-area').querySelectorAll('.options button');
+  buttons.forEach((b, i) => {
+    b.disabled = true;
+    if (q.options[i] === q.w) b.classList.add('correct');
+    else if (i === idx) b.classList.add('wrong');
+  });
+  const fb = $('quiz-fb');
+  fb.className = 'feedback ' + (ok ? 'ok' : 'no');
+  fb.textContent = ok ? '答對了！' : `正確答案：${q.w.en} ${q.w.zh}`;
+  speak(q.w.en);
+  $('quiz-next').classList.remove('hidden');
+  $('quiz-next').focus();
+}
+function nextQuiz() {
+  quiz.i++;
+  quiz.answered = false;
+  renderQuiz();
+}
+$('quiz-mode').addEventListener('change', startQuiz);
+$('quiz-restart').addEventListener('click', startQuiz);
+
+// ---------- 拼字 ----------
+const SPELL_LEN = 10;
+const spell = { qs: [], i: 0, score: 0, hints: 0, checked: false, wrong: [] };
+function startSpell() {
+  const words = pool();
+  spell.qs = pickWeighted(words, Math.min(SPELL_LEN, words.length));
+  spell.i = 0;
+  spell.score = 0;
+  spell.wrong = [];
+  resetSpellQuestion();
+  renderSpell();
+}
+function resetSpellQuestion() { spell.hints = 0; spell.checked = false; }
+function hintText(en, n) {
+  // 顯示前 n 個字母，其餘用底線，空白保留
+  let shown = 0;
+  return en.split('').map((c) => {
+    if (c === ' ') return '  ';
+    if (/[a-z]/i.test(c) && shown++ >= n) return '_ ';
+    return c + ' ';
+  }).join('').trim();
+}
+function renderSpell() {
+  setBar('spell-bar', spell.i, spell.qs.length);
+  const area = $('spell-area');
+  if (!spell.qs.length) { area.innerHTML = emptyPoolHtml(); return; }
+  if (spell.i >= spell.qs.length) {
+    area.innerHTML = `<div class="center">
+      <div class="score">${spell.score} / ${spell.qs.length}</div>
+      <p>${spell.score === spell.qs.length ? '全部拼對！🎉' : '再練一次會更熟 ✍️'}</p>
+      ${spell.wrong.length ? `<p class="muted">要再練的單字：</p><ul class="summary-list">${spell.wrong.map((w) => `<li><b>${esc(w.en)}</b> ${esc(w.zh)}</li>`).join('')}</ul>` : ''}
+      <button class="btn primary" onclick="startSpell()">再練一次</button>
+    </div>`;
+    return;
+  }
+  const w = spell.qs[spell.i];
+  area.innerHTML = `
+    <div class="muted center" style="font-size:14px">第 ${spell.i + 1} 題</div>
+    <div class="q-prompt">${esc(w.zh)}</div>
+    <div class="center"><span class="pos">${esc(w.pos || '')}</span></div>
+    <div class="center muted" id="spell-hint" style="font-family:ui-monospace,monospace;font-size:18px;margin-top:10px;white-space:pre">${esc(hintText(w.en, spell.hints))}</div>
+    <form id="spell-form">
+      <input type="text" class="spell-input" id="spell-input" placeholder="輸入英文" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+      <div class="feedback" id="spell-fb"></div>
+      <div class="row" style="justify-content:center;gap:10px">
+        <button class="btn" type="button" id="spell-hint-btn">💡 提示</button>
+        <button class="btn" type="button" id="spell-speak">🔊 聽發音</button>
+        <button class="btn primary" type="submit" id="spell-submit">檢查</button>
+      </div>
+    </form>`;
+  const input = $('spell-input');
+  input.focus();
+  $('spell-hint-btn').onclick = () => {
+    spell.hints++;
+    $('spell-hint').textContent = hintText(w.en, spell.hints);
+    input.focus();
+  };
+  $('spell-speak').onclick = () => { speak(w.en); input.focus(); };
+  $('spell-form').onsubmit = (e) => {
+    e.preventDefault();
+    if (spell.checked) { spell.i++; resetSpellQuestion(); renderSpell(); return; }
+    const answer = normalize(input.value);
+    if (!answer) return;
+    const accepted = [w.en, ...(w.alt || [])].map(normalize);
+    const ok = accepted.includes(answer);
+    // 用了提示還是算答對，但不加熟練度
+    if (ok && spell.hints === 0) mark(w, true);
+    if (!ok) { mark(w, false); spell.wrong.push(w); }
+    if (ok) spell.score++;
+    spell.checked = true;
+    input.classList.add(ok ? 'ok' : 'no');
+    input.readOnly = true;
+    const fb = $('spell-fb');
+    fb.className = 'feedback ' + (ok ? 'ok' : 'no');
+    fb.textContent = ok ? (spell.hints ? '答對了（有用提示）' : '完全正確！') : `正確拼法：${w.en}`;
+    $('spell-hint').textContent = hintText(w.en, Infinity);
+    $('spell-hint-btn').disabled = true;
+    $('spell-submit').textContent = '下一題 →';
+    speak(w.en);
+  };
+}
+$('spell-restart').addEventListener('click', startSpell);
+
+// ---------- 鍵盤快捷鍵 ----------
+document.addEventListener('keydown', (e) => {
+  if (e.target.matches('input, select, textarea, button')) return;
+  if (currentView === 'cards' && cards.queue.length) {
+    if (e.key === ' ') { e.preventDefault(); flipCard(); }
+    else if (cards.flipped && e.key === '1') answerCard(false);
+    else if (cards.flipped && e.key === '2') answerCard(true);
+  }
+  if (currentView === 'quiz' && quiz.i < quiz.qs.length) {
+    if (!quiz.answered && /^[1-4]$/.test(e.key)) answerQuiz(+e.key - 1);
+    else if (quiz.answered && e.key === 'Enter') { e.preventDefault(); nextQuiz(); }
+  }
+});
+
+renderStats();
+renderList();
+</script>
+</body>
+</html>
